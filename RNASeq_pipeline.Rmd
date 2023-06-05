@@ -1,0 +1,252 @@
+---
+title: "RNASeq snakemake pipeline"
+author: "Joanna Griffiths"
+date: "2023-05-24"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("reticulate")
+```
+
+This pipeline is designed to take your raw sequencing reads (i.e. gzipped fasta files: `Sample1_R1.fq.gz`) and produced a matrix file with gene count for each sample. It uses three programs to do this. FastQC, fastp, and salmon. There are two versions of this pipeline depending on how you sequenced your samples. If samples were sequenced on only one lane (i.e. there are only two files for a single sample: Sample1_R1.fq.gz & Sample1_R2.fq.gz) use the snakefile called `snakefile`. If samples were sequenced across two lanes (i.e., there are four files for a single sample: Sample1_R1_L1.fq.gz & Sample1_R2_L1.fq.gz & Sample1_R1_L2.fq.gz & Sample1_R2_L2.fq.gz, in this case the L refers to lane number), use the snakefile called `snakefile2`. The final output of this pipeline is a file called `all_quant.sf`. It is a gene count (normalized by transcripts per million) matrix file for all samples.
+
+## FastQC
+
+This program performs some simple quality control checks on your raw reads and looks for things like adapter contamination, PCR duplicates, nucleotide base quality scores, etc. The output of this program is an html file (which you can open using a web browser and visualize the results) and a zipped file with the output written to a text document.
+
+See the website and manual here: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+
+## fastp
+
+This is a great multipurpose tool that identifies adapters and trims them off the reads, removes low quality bases, removes reads that are too short, etc. It takes your fasta files (e.g. Sample1_R1.fq.gz) and outputs a fastp file (named 1P.fq for the forward reads and 2p.fq for the reverse reads).
+
+See the website for more info: https://github.com/OpenGene/fastp
+
+
+## Salmon
+
+Salmon is a tool for wicked-fast transcript quantification from RNA-seq data. It requires a reference transcriptome to "map" reads with. This snakemake pipeline also makes use of the reference genome for exra quality control. If you don't have the reference genome, let me know and I can modify the snakefile to run with just the transcriptome. Read more here: https://salmon.readthedocs.io/en/latest/salmon.html#using-salmon
+
+
+## Setting up the Pipeline
+
+First let's make a directory for all of our files:
+```{bash eval=FALSE}
+mkdir snakemake_dir
+```
+
+Move all of your fasta files into this directory. For the single lane files, make sure that the naming scheme follows this suffix: `_R1_001.fastq.gz` and `_R2_001.fastq.gz`. For the samples sequenced on two lanes, make sure the naming scheme follows this suffix: `_L001_R1_001.fastq.gz`, `_L001_R2_001.fastq.gz`, `_L002_R1_001.fastq.gz`, `_L002_R2_001.fastq.gz`.
+
+Here's an example of a line of code to quickly rename all your files to something similar. Let's say your files ended with the suffix `_R1_043.fq.gz` and you want to change it to `_R1_001.fastq.gz`. 
+```{bash eval=FALSE}
+rename -v 's/_R1_043.fq.gz/_R1_001.fastq.gz/' *R1*
+```
+Repeat for the R2 files
+```{bash eval=FALSE}
+rename -v 's/_R2_043.fq.gz/_R2_001.fastq.gz/' *R2*
+```
+
+Create a file called `sample_names.txt` in the directory `snakemake_dir`. In this file, create a list of all your sample prefix names (e.g. Sample1 for file `Sample1_R1_L001.fastq.gz`)
+```{bash eval=FALSE}
+Sample1
+Sample2
+Sample3
+Sample4
+Sample5
+```
+
+Create a file called `references.txt` in teh diretory `snakemake_dir`. This file contains the reference genome and reference transciptome for your species. The first line should contain the genome and the second line should contain the transcriptome or file with the RNA fasta sequences. It is very important that they follow this order. Example:
+```{bash eval=FALSE}
+GCF_021917145.1_fHypTra1_genomic.fna.gz
+GCF_021917145.1_fHypTra1_rna.fna.gz
+```
+
+
+Now let's install the snakemake software. First load conda on FARM and then install snakemake. This will take a few mintues. Type `y` to install all necessary software that it asks for.
+```{bash eval=FALSE}
+module load conda/base/latest
+conda create -c bioconda -c conda-forge -n snakemake snakemake
+```
+We will later activate and deactivate snakemake by running the following lines of code. Feel free to test it now to make sure its working:
+```{bash eval=FALSE}
+source activate snakemake
+conda deactivate
+```
+*Note that conda has to be loaded first if its isn't already
+
+Make sure that the snakemake file (`snakefile`) is in the directory `snakemake_dir`.
+
+
+## Running the Pipeline
+Now we are ready to run our pipeline! Create a file named `snakemake.sh`. This will be the main line of code to run the pipeline as a job on FARM. This is an example of how I set it up. Make sure you change the `-D` flag to your home directory and the `-o` output and `-e` error files to a path on your directory. Also change it to your email address!
+```{bash eval=FALSE}
+#!/bin/bash
+
+#SBATCH -D /home/jsgriffi
+#SBATCH --job-name=rna_snake
+#SBATCH --mem=60G
+#SBATCH --ntasks=8
+#SBATCH -o joanna/Smelt_RNA/output_files/out-%A.%a_snake.txt
+#SBATCH -e joanna/Smelt_RNA/output_files/error-%A.%a_snake.txt
+#SBATCH --time=172:00:00
+#SBATCH --mail-user=jsgriffiths@ucdavis.edu
+#SBATCH --mail-type=ALL
+#SBATCH -p high
+
+module load conda/base/latest
+source activate snakemake
+
+module load fastqc/0.11.9
+module load deprecated/fastp/0.20.1
+module load salmon/1.10.1
+
+cd /group/awhitehegrp/joanna/Smelt_RNA/snakemake_dir
+
+#Run this line of code if your samples were sequenced on one lane:
+snakemake --snakefile snakefile --printshellcmd --jobs 10 --conda-frontend conda
+
+#Run this line of code if your samples were sequenced on two lanes:
+snakemake --snakefile snakefile2 --printshellcmd --jobs 10 --conda-frontend conda
+
+conda deactivate
+```
+
+To run as a job on FARM, submit:
+```{bash eval=FALSE}
+sbatch snakemake.sh
+```
+
+
+## Snakefile
+
+This is the content for snakefile2:
+This code was written with help from:
+* https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view
+
+```{python eval=FALSE}
+
+import sys
+
+with open('sample_names.txt') as f:
+    SAMPLES = f.read().splitlines()
+    
+print('samples are:', SAMPLES, file=sys.stderr)
+
+with open('references.txt') as f2:
+    REF = f2.read().splitlines()
+    REF_g = [REF[0]]
+    REF_r = [REF[1]]
+
+rule all:
+    input:
+        expand("results/fastqc/{sample}_L001_R1_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L001_R2_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L002_R1_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L002_R2_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastp/{sample}_L1_1P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L1_2P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L2_1P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L2_2P.fq", sample=SAMPLES),
+        "results/Salmon_index",
+        expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
+        "results/Salmon_quant/all_quant.sf"
+
+rule make_fastqc:
+    input:
+        L1R1 = "{sample}_L001_R1_001.fastq.gz",
+        L1R2 = "{sample}_L001_R2_001.fastq.gz",
+        L2R1 = "{sample}_L002_R1_001.fastq.gz",
+        L2R2 = "{sample}_L002_R2_001.fastq.gz",
+    params:
+        outdir = "results/fastqc"
+    priority: 2
+    log:
+        L1R1= "logs/fastqc/{sample}_L1_R1.txt",
+        L1R2 = "logs/fastqc/{sample}_L1_R2.txt",
+        L2R1= "logs/fastqc/{sample}_L2_R1.txt",
+        L2R2 = "logs/fastqc/{sample}_L2_R2.txt",
+    output:
+        "results/fastqc/{sample}_L001_R1_001_fastqc.html",
+        "results/fastqc/{sample}_L001_R2_001_fastqc.html",
+        "results/fastqc/{sample}_L002_R1_001_fastqc.html",
+        "results/fastqc/{sample}_L002_R2_001_fastqc.html",
+    run:
+        shell("fastqc {input.L1R1} -o results/fastqc 2> {log.L1R1}")
+        shell("fastqc {input.L1R2} -o results/fastqc 2> {log.L1R2}")
+        shell("fastqc {input.L2R1} -o results/fastqc 2> {log.L2R1}")
+        shell("fastqc {input.L2R2} -o results/fastqc 2> {log.L2R2}")
+
+
+rule trim_fastp:
+    input:
+        L1R1 = "{sample}_L001_R1_001.fastq.gz",
+        L1R2 = "{sample}_L001_R2_001.fastq.gz",
+        L2R1 = "{sample}_L002_R1_001.fastq.gz",
+        L2R2 = "{sample}_L002_R2_001.fastq.gz",
+    params:
+        outdir = "results/fastp",
+    priority: 2
+    log:
+        L1 = "logs/fastp/{sample}_L1.txt",
+        L2 = "logs/fastp/{sample}_L2.txt",
+    output:
+        L1R1 = "results/fastp/{sample}_L1_1P.fq",
+        L1R2 = "results/fastp/{sample}_L1_2P.fq",
+        L2R1 = "results/fastp/{sample}_L2_1P.fq",
+        L2R2 = "results/fastp/{sample}_L2_2P.fq",
+    run:
+        shell("fastp --in1 {input.L1R1} --in2 {input.L1R2} --out1 {output.L1R1} --out2 {output.L1R2} --detect_adapter_for_pe 2> {log.L1}")
+        shell("fastp --in1 {input.L2R1} --in2 {input.L2R2} --out1 {output.L2R1} --out2 {output.L2R2} --detect_adapter_for_pe 2> {log.L2}")
+
+
+rule index_reference:
+    input:
+        g = REF_g,
+        r = REF_r,
+    params:
+        outdir = "results/Salmon_index"
+    output:
+        directory("results/Salmon_index")
+    log:
+        "logs/salmon/index.txt",
+    priority: 3
+    run:
+        shell("grep '^>' <(gunzip -c {input.g}) | cut -d ' ' -f 1 > decoys.txt")
+        shell("sed -i.bak -e 's/>//g' decoys.txt")
+        shell("cat {input.r} {input.g} > gentrome.fa.gz")
+        shell("salmon index --index {output} --transcripts gentrome.fa.gz -d decoys.txt --gencode 2> {log}")
+
+rule salmon_quant:
+    input: 
+        L1R1 = "results/fastp/{sample}_L1_1P.fq",
+        L1R2 = "results/fastp/{sample}_L1_2P.fq",
+        L2R1 = "results/fastp/{sample}_L2_1P.fq",
+        L2R2 = "results/fastp/{sample}_L2_2P.fq",
+    log:
+        "logs/salmon/{sample}_quant.txt",
+    params:
+        outdir = "results/Salmon_quant",
+    priority: 1
+    output: 
+        directory("results/Salmon_quant/{sample}.quant")
+    shell:
+        "salmon quant -i results/Salmon_index --libType A -1 {input.L1R1} {input.L2R1} -2 {input.L1R2} {input.L2R2} -o {output} --validateMappings --seqBias --gcBias 2> {log}"
+
+rule salmon_merge:
+    input: 
+        expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
+    log:
+        "logs/salmon/merge.txt",
+    output: 
+        "results/Salmon_quant/all_quant.sf"
+    priority: 0
+    shell:
+        "salmon quantmerge --quants {input} -o {output} 2> {log}"
+        
+```
+

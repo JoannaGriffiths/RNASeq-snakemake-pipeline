@@ -378,7 +378,10 @@ called <code>snakefile</code>. If samples were sequenced across two
 lanes (i.e., there are four files for a single sample:
 Sample1_R1_L1.fq.gz &amp; Sample1_R2_L1.fq.gz &amp; Sample1_R1_L2.fq.gz
 &amp; Sample1_R2_L2.fq.gz, in this case the L refers to lane number),
-use the snakefile called <code>snakefile2</code>.</p>
+use the snakefile called <code>snakefile2</code>. The final output of
+this pipeline is a file called <code>all_quant.sf</code>. It is a gene
+count (normalized by transcripts per million) matrix file for all
+samples.</p>
 <div id="fastqc" class="section level2">
 <h2>FastQC</h2>
 <p>This program performs some simple quality control checks on your raw
