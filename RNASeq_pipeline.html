@@ -437,14 +437,23 @@ Sample2
 Sample3
 Sample4
 Sample5</code></pre>
-<p>Create a file called <code>references.txt</code> in teh diretory
+<p>Create a file called <code>references.txt</code> in the diretory
 <code>snakemake_dir</code>. This file contains the reference genome and
 reference transciptome for your species. The first line should contain
-the genome and the second line should contain the transcriptome or file
-with the RNA fasta sequences. It is very important that they follow this
-order. Example:</p>
-<pre class="bash"><code>GCF_021917145.1_fHypTra1_genomic.fna.gz
-GCF_021917145.1_fHypTra1_rna.fna.gz</code></pre>
+the transcriptome and the second line should contain the genome. It is
+very important that they follow this order. Example:</p>
+<pre class="bash"><code>GCF_021917145.1_fHypTra1_rna.fna.gz
+GCF_021917145.1_fHypTra1_genomic.fna.gz</code></pre>
+<p>If you do not have a genome for your species, set up your
+<code>references.txt</code> file like so. Here, I am just putting a
+place holder name for where the genome file would go. The pipeline will
+look for a file called NA, so make sure you do not have another file in
+the snakemake directory that is called NA, because the pipeline will
+think it is the genome. You can write whatever you want on the second
+line, it doesn’t have to be NA, the file just can’t actually exist in
+the directory.</p>
+<pre class="bash"><code>GCF_021917145.1_fHypTra1_rna.fna.gz
+NA</code></pre>
 <p>Now let’s install the snakemake software. First load conda on FARM
 and then install snakemake. This will take a few mintues. Type
 <code>y</code> to install all necessary software that it asks for.</p>
