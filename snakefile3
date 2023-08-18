@@ -7,8 +7,10 @@ print('samples are:', SAMPLES, file=sys.stderr)
 
 with open('references.txt') as f2:
     REF = f2.read().splitlines()
-    REF_g = [REF[0]]
-    REF_r = [REF[1]]
+    REF_r = [REF[0]]
+    REF_g = [REF[1]]
+
+ruleorder: index_reference > index_reference2
 
 rule all:
     input:
@@ -88,6 +90,17 @@ rule index_reference:
         shell("sed -i.bak -e 's/>//g' decoys.txt")
         shell("cat {input.r} {input.g} > gentrome.fa.gz")
         shell("salmon index --index {output} --transcripts gentrome.fa.gz -d decoys.txt --gencode 2> {log}")
+
+rule index_reference2:
+  input:
+    r = REF_r
+  output:
+    directory("results/Salmon_index")
+  log:
+    "logs/salmon/index.txt"
+  priority: 3
+  shell:
+    "salmon index --index {output} --transcripts {input.r} --gencode"
 
 rule salmon_quant:
     input: 

@@ -60,10 +60,16 @@ Sample4
 Sample5
 ```
 
-Create a file called `references.txt` in teh diretory `snakemake_dir`. This file contains the reference genome and reference transciptome for your species. The first line should contain the genome and the second line should contain the transcriptome or file with the RNA fasta sequences. It is very important that they follow this order. Example:
+Create a file called `references.txt` in the diretory `snakemake_dir`. This file contains the reference genome and reference transciptome for your species. The first line should contain the transcriptome and the second line should contain the genome. It is very important that they follow this order. Example:
 ```{bash eval=FALSE}
-GCF_021917145.1_fHypTra1_genomic.fna.gz
 GCF_021917145.1_fHypTra1_rna.fna.gz
+GCF_021917145.1_fHypTra1_genomic.fna.gz
+```
+
+If you do not have a genome for your species, set up your `references.txt` file like so. Here, I am just putting a place holder name for where the genome file would go. The pipeline will look for a file called NA, so make sure you do not have another file in the snakemake directory that is called NA, because the pipeline will think it is the genome. You can write whatever you want on the second line, it doesn't have to be NA, the file just can't actually exist in the directory.
+```{bash eval=FALSE}
+GCF_021917145.1_fHypTra1_rna.fna.gz
+NA
 ```
 
 
