@@ -9,7 +9,7 @@ with open('references.txt') as f2:
     REF = f2.read().splitlines()
     REF_r = [REF[0]]
     REF_g = [REF[1]]
-    
+
 ruleorder: index_reference > index_reference2
 
 rule all:
@@ -18,14 +18,14 @@ rule all:
         expand("results/fastqc/{sample}_R2_001_fastqc.html", sample=SAMPLES),
         expand("results/fastp/{sample}_1P.fq", sample=SAMPLES),
         expand("results/fastp/{sample}_2P.fq", sample=SAMPLES),
-	"results/Salmon_index",
+        "results/Salmon_index",
         expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
         "results/Salmon_quant/all_quant.sf"
 
 rule make_fastqc:
     input:
         R1 = "{sample}_R1_001.fastq.gz",
-	R2 = "{sample}_R2_001.fastq.gz",
+        R2 = "{sample}_R2_001.fastq.gz",
     params:
         outdir = "results/fastqc",
     priority: 2
@@ -35,11 +35,11 @@ rule make_fastqc:
     output:
         "results/fastqc/{sample}_R1_001_fastqc.html",
         "results/fastqc/{sample}_R1_001_fastqc.zip",
-	"results/fastqc/{sample}_R2_001_fastqc.html",
+        "results/fastqc/{sample}_R2_001_fastqc.html",
         "results/fastqc/{sample}_R2_001_fastqc.zip",
     run:
         shell("fastqc {input.R1} -o results/fastqc 2> {log.R1}")
-	shell("fastqc {input.R2} -o results/fastqc 2> {log.R2}")
+        shell("fastqc {input.R2} -o results/fastqc 2> {log.R2}")
 
 
 rule trim_fastp:
@@ -48,7 +48,7 @@ rule trim_fastp:
         R2 = "{sample}_R2_001.fastq.gz",
     params:
         outdir = "results/fastp",
-    priority: 2	
+    priority: 2
     log:
         "logs/fastp/{sample}.txt",
     output:
@@ -82,9 +82,9 @@ rule index_reference2:
   priority: 3
   shell:
     "salmon index --index {output} --transcripts {input.r} --gencode"
-    
+
 rule salmon_quant:
-    input: 
+    input:
         R1 = "results/fastp/{sample}_1P.fq",
         R2 = "results/fastp/{sample}_2P.fq",
     log:
@@ -92,17 +92,17 @@ rule salmon_quant:
     params:
         outdir = "results/Salmon_quant",
     priority: 1
-    output: 
+    output:
         directory("results/Salmon_quant/{sample}.quant"),
     shell:
         "salmon quant -i results/Salmon_index --libType A -1 {input.R1} -2 {input.R2} -o {output} --validateMappings --seqBias --gcBias 2> {log}"
 
 rule salmon_merge:
-    input: 
+    input:
         expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
     log:
         "logs/salmon/merge.txt",
-    output: 
+    output:
         "results/Salmon_quant/all_quant.sf"
     priority: 0
     shell:
