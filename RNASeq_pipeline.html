@@ -363,7 +363,6 @@ display: none;
 <li><a href="#salmon" id="toc-salmon">Salmon</a></li>
 <li><a href="#setting-up-the-pipeline" id="toc-setting-up-the-pipeline">Setting up the Pipeline</a></li>
 <li><a href="#running-the-pipeline" id="toc-running-the-pipeline">Running the Pipeline</a></li>
-<li><a href="#snakefile" id="toc-snakefile">Snakefile</a></li>
 </ul>
 </div>
 
@@ -374,7 +373,7 @@ do this. FastQC, fastp, and salmon. There are two versions of this
 pipeline depending on how you sequenced your samples. If samples were
 sequenced on only one lane (i.e. there are only two files for a single
 sample: Sample1_R1.fq.gz &amp; Sample1_R2.fq.gz) use the snakefile
-called <code>snakefile</code>. If samples were sequenced across two
+called <code>snakefile1</code>. If samples were sequenced across two
 lanes (i.e., there are four files for a single sample:
 Sample1_R1_L1.fq.gz &amp; Sample1_R2_L1.fq.gz &amp; Sample1_R1_L2.fq.gz
 &amp; Sample1_R2_L2.fq.gz, in this case the L refers to lane number),
@@ -382,6 +381,7 @@ use the snakefile called <code>snakefile2</code>. The final output of
 this pipeline is a file called <code>all_quant.sf</code>. It is a gene
 count (normalized by transcripts per million) matrix file for all
 samples.</p>
+<p>This code was written with help from: * <a href="https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view" class="uri">https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view</a></p>
 <div id="fastqc" class="section level2">
 <h2>FastQC</h2>
 <p>This program performs some simple quality control checks on your raw
@@ -406,9 +406,7 @@ the reverse reads).</p>
 <p>Salmon is a tool for wicked-fast transcript quantification from
 RNA-seq data. It requires a reference transcriptome to “map” reads with.
 This snakemake pipeline also makes use of the reference genome for exra
-quality control. If you don’t have the reference genome, let me know and
-I can modify the snakefile to run with just the transcriptome. Read more
-here: <a href="https://salmon.readthedocs.io/en/latest/salmon.html#using-salmon" class="uri">https://salmon.readthedocs.io/en/latest/salmon.html#using-salmon</a></p>
+quality control. Read more here: <a href="https://salmon.readthedocs.io/en/latest/salmon.html#using-salmon" class="uri">https://salmon.readthedocs.io/en/latest/salmon.html#using-salmon</a></p>
 </div>
 <div id="setting-up-the-pipeline" class="section level2">
 <h2>Setting up the Pipeline</h2>
@@ -465,8 +463,9 @@ working:</p>
 <pre class="bash"><code>source activate snakemake
 conda deactivate</code></pre>
 <p>*Note that conda has to be loaded first if its isn’t already</p>
-<p>Make sure that the snakemake file (<code>snakefile</code>) is in the
-directory <code>snakemake_dir</code>.</p>
+<p>Make sure that the snakemake file (<code>snakefile1</code> or
+<code>snakefile2</code>) is in the directory
+<code>snakemake_dir</code>.</p>
 </div>
 <div id="running-the-pipeline" class="section level2">
 <h2>Running the Pipeline</h2>
@@ -499,7 +498,7 @@ module load salmon/1.10.1
 cd /group/awhitehegrp/joanna/Smelt_RNA/snakemake_dir
 
 #Run this line of code if your samples were sequenced on one lane:
-snakemake --snakefile snakefile --printshellcmd --jobs 10 --conda-frontend conda
+snakemake --snakefile snakefile1 --printshellcmd --jobs 10 --conda-frontend conda
 
 #Run this line of code if your samples were sequenced on two lanes:
 snakemake --snakefile snakefile2 --printshellcmd --jobs 10 --conda-frontend conda
@@ -507,128 +506,6 @@ snakemake --snakefile snakefile2 --printshellcmd --jobs 10 --conda-frontend cond
 conda deactivate</code></pre>
 <p>To run as a job on FARM, submit:</p>
 <pre class="bash"><code>sbatch snakemake.sh</code></pre>
-</div>
-<div id="snakefile" class="section level2">
-<h2>Snakefile</h2>
-<p>This is the content for snakefile2: This code was written with help
-from: * <a href="https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view" class="uri">https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view</a></p>
-<pre class="python"><code>import sys
-
-with open(&#39;sample_names.txt&#39;) as f:
-    SAMPLES = f.read().splitlines()
-    
-print(&#39;samples are:&#39;, SAMPLES, file=sys.stderr)
-
-with open(&#39;references.txt&#39;) as f2:
-    REF = f2.read().splitlines()
-    REF_g = [REF[0]]
-    REF_r = [REF[1]]
-
-rule all:
-    input:
-        expand(&quot;results/fastqc/{sample}_L001_R1_001_fastqc.html&quot;, sample=SAMPLES),
-        expand(&quot;results/fastqc/{sample}_L001_R2_001_fastqc.html&quot;, sample=SAMPLES),
-        expand(&quot;results/fastqc/{sample}_L002_R1_001_fastqc.html&quot;, sample=SAMPLES),
-        expand(&quot;results/fastqc/{sample}_L002_R2_001_fastqc.html&quot;, sample=SAMPLES),
-        expand(&quot;results/fastp/{sample}_L1_1P.fq&quot;, sample=SAMPLES),
-        expand(&quot;results/fastp/{sample}_L1_2P.fq&quot;, sample=SAMPLES),
-        expand(&quot;results/fastp/{sample}_L2_1P.fq&quot;, sample=SAMPLES),
-        expand(&quot;results/fastp/{sample}_L2_2P.fq&quot;, sample=SAMPLES),
-        &quot;results/Salmon_index&quot;,
-        expand(&quot;results/Salmon_quant/{sample}.quant&quot;, sample=SAMPLES),
-        &quot;results/Salmon_quant/all_quant.sf&quot;
-
-rule make_fastqc:
-    input:
-        L1R1 = &quot;{sample}_L001_R1_001.fastq.gz&quot;,
-        L1R2 = &quot;{sample}_L001_R2_001.fastq.gz&quot;,
-        L2R1 = &quot;{sample}_L002_R1_001.fastq.gz&quot;,
-        L2R2 = &quot;{sample}_L002_R2_001.fastq.gz&quot;,
-    params:
-        outdir = &quot;results/fastqc&quot;
-    priority: 2
-    log:
-        L1R1= &quot;logs/fastqc/{sample}_L1_R1.txt&quot;,
-        L1R2 = &quot;logs/fastqc/{sample}_L1_R2.txt&quot;,
-        L2R1= &quot;logs/fastqc/{sample}_L2_R1.txt&quot;,
-        L2R2 = &quot;logs/fastqc/{sample}_L2_R2.txt&quot;,
-    output:
-        &quot;results/fastqc/{sample}_L001_R1_001_fastqc.html&quot;,
-        &quot;results/fastqc/{sample}_L001_R2_001_fastqc.html&quot;,
-        &quot;results/fastqc/{sample}_L002_R1_001_fastqc.html&quot;,
-        &quot;results/fastqc/{sample}_L002_R2_001_fastqc.html&quot;,
-    run:
-        shell(&quot;fastqc {input.L1R1} -o results/fastqc 2&gt; {log.L1R1}&quot;)
-        shell(&quot;fastqc {input.L1R2} -o results/fastqc 2&gt; {log.L1R2}&quot;)
-        shell(&quot;fastqc {input.L2R1} -o results/fastqc 2&gt; {log.L2R1}&quot;)
-        shell(&quot;fastqc {input.L2R2} -o results/fastqc 2&gt; {log.L2R2}&quot;)
-
-
-rule trim_fastp:
-    input:
-        L1R1 = &quot;{sample}_L001_R1_001.fastq.gz&quot;,
-        L1R2 = &quot;{sample}_L001_R2_001.fastq.gz&quot;,
-        L2R1 = &quot;{sample}_L002_R1_001.fastq.gz&quot;,
-        L2R2 = &quot;{sample}_L002_R2_001.fastq.gz&quot;,
-    params:
-        outdir = &quot;results/fastp&quot;,
-    priority: 2
-    log:
-        L1 = &quot;logs/fastp/{sample}_L1.txt&quot;,
-        L2 = &quot;logs/fastp/{sample}_L2.txt&quot;,
-    output:
-        L1R1 = &quot;results/fastp/{sample}_L1_1P.fq&quot;,
-        L1R2 = &quot;results/fastp/{sample}_L1_2P.fq&quot;,
-        L2R1 = &quot;results/fastp/{sample}_L2_1P.fq&quot;,
-        L2R2 = &quot;results/fastp/{sample}_L2_2P.fq&quot;,
-    run:
-        shell(&quot;fastp --in1 {input.L1R1} --in2 {input.L1R2} --out1 {output.L1R1} --out2 {output.L1R2} --detect_adapter_for_pe 2&gt; {log.L1}&quot;)
-        shell(&quot;fastp --in1 {input.L2R1} --in2 {input.L2R2} --out1 {output.L2R1} --out2 {output.L2R2} --detect_adapter_for_pe 2&gt; {log.L2}&quot;)
-
-
-rule index_reference:
-    input:
-        g = REF_g,
-        r = REF_r,
-    params:
-        outdir = &quot;results/Salmon_index&quot;
-    output:
-        directory(&quot;results/Salmon_index&quot;)
-    log:
-        &quot;logs/salmon/index.txt&quot;,
-    priority: 3
-    run:
-        shell(&quot;grep &#39;^&gt;&#39; &lt;(gunzip -c {input.g}) | cut -d &#39; &#39; -f 1 &gt; decoys.txt&quot;)
-        shell(&quot;sed -i.bak -e &#39;s/&gt;//g&#39; decoys.txt&quot;)
-        shell(&quot;cat {input.r} {input.g} &gt; gentrome.fa.gz&quot;)
-        shell(&quot;salmon index --index {output} --transcripts gentrome.fa.gz -d decoys.txt --gencode 2&gt; {log}&quot;)
-
-rule salmon_quant:
-    input: 
-        L1R1 = &quot;results/fastp/{sample}_L1_1P.fq&quot;,
-        L1R2 = &quot;results/fastp/{sample}_L1_2P.fq&quot;,
-        L2R1 = &quot;results/fastp/{sample}_L2_1P.fq&quot;,
-        L2R2 = &quot;results/fastp/{sample}_L2_2P.fq&quot;,
-    log:
-        &quot;logs/salmon/{sample}_quant.txt&quot;,
-    params:
-        outdir = &quot;results/Salmon_quant&quot;,
-    priority: 1
-    output: 
-        directory(&quot;results/Salmon_quant/{sample}.quant&quot;)
-    shell:
-        &quot;salmon quant -i results/Salmon_index --libType A -1 {input.L1R1} {input.L2R1} -2 {input.L1R2} {input.L2R2} -o {output} --validateMappings --seqBias --gcBias 2&gt; {log}&quot;
-
-rule salmon_merge:
-    input: 
-        expand(&quot;results/Salmon_quant/{sample}.quant&quot;, sample=SAMPLES),
-    log:
-        &quot;logs/salmon/merge.txt&quot;,
-    output: 
-        &quot;results/Salmon_quant/all_quant.sf&quot;
-    priority: 0
-    shell:
-        &quot;salmon quantmerge --quants {input} -o {output} 2&gt; {log}&quot;</code></pre>
 </div>
 
 
