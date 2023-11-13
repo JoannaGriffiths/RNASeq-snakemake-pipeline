@@ -17,11 +17,13 @@ This pipeline is designed to take your raw sequencing reads (i.e. gzipped fasta 
 This code was written with help from:
 * https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view
 
-## FastQC
+## FastQC and MultiQC
 
-This program performs some simple quality control checks on your raw reads and looks for things like adapter contamination, PCR duplicates, nucleotide base quality scores, etc. The output of this program is an html file (which you can open using a web browser and visualize the results) and a zipped file with the output written to a text document.
+The program FastQC performs some simple quality control checks on your raw reads and looks for things like adapter contamination, PCR duplicates, nucleotide base quality scores, etc. The output of this program is an html file (which you can open using a web browser and visualize the results) and a zipped file with the output written to a text document. Not part of this pipeline, but something I highly recommend is to use the program MultiQC to combine the output pf FastQC into a single html file for easier viewing and comparing. You can use this step to remove poor quality samples from your pipeline.
 
-See the website and manual here: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+See the website and manual here for FastQC: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+MultiQC: https://multiqc.info/
 
 
 ## fastp

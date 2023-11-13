@@ -358,7 +358,8 @@ display: none;
 
 <div id="TOC">
 <ul>
-<li><a href="#fastqc" id="toc-fastqc">FastQC</a></li>
+<li><a href="#fastqc-and-multiqc" id="toc-fastqc-and-multiqc">FastQC and
+MultiQC</a></li>
 <li><a href="#fastp" id="toc-fastp">fastp</a></li>
 <li><a href="#salmon" id="toc-salmon">Salmon</a></li>
 <li><a href="#setting-up-the-pipeline" id="toc-setting-up-the-pipeline">Setting up the Pipeline</a></li>
@@ -382,15 +383,19 @@ this pipeline is a file called <code>all_quant.sf</code>. It is a gene
 count (normalized by transcripts per million) matrix file for all
 samples.</p>
 <p>This code was written with help from: * <a href="https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view" class="uri">https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view</a></p>
-<div id="fastqc" class="section level2">
-<h2>FastQC</h2>
-<p>This program performs some simple quality control checks on your raw
-reads and looks for things like adapter contamination, PCR duplicates,
-nucleotide base quality scores, etc. The output of this program is an
-html file (which you can open using a web browser and visualize the
-results) and a zipped file with the output written to a text
-document.</p>
-<p>See the website and manual here: <a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/" class="uri">https://www.bioinformatics.babraham.ac.uk/projects/fastqc/</a></p>
+<div id="fastqc-and-multiqc" class="section level2">
+<h2>FastQC and MultiQC</h2>
+<p>The program FastQC performs some simple quality control checks on
+your raw reads and looks for things like adapter contamination, PCR
+duplicates, nucleotide base quality scores, etc. The output of this
+program is an html file (which you can open using a web browser and
+visualize the results) and a zipped file with the output written to a
+text document. Not part of this pipeline, but something I highly
+recommend is to use the program MultiQC to combine the output pf FastQC
+into a single html file for easier viewing and comparing. You can use
+this step to remove poor quality samples from your pipeline.</p>
+<p>See the website and manual here for FastQC: <a href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/" class="uri">https://www.bioinformatics.babraham.ac.uk/projects/fastqc/</a></p>
+<p>MultiQC: <a href="https://multiqc.info/" class="uri">https://multiqc.info/</a></p>
 </div>
 <div id="fastp" class="section level2">
 <h2>fastp</h2>

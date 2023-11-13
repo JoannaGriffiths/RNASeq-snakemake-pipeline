@@ -50,8 +50,7 @@ rule make_fastqc:
         shell("fastqc {input.L1R2} -o results/fastqc 2> {log.L1R2}")
         shell("fastqc {input.L2R1} -o results/fastqc 2> {log.L2R1}")
         shell("fastqc {input.L2R2} -o results/fastqc 2> {log.L2R2}")
-
-
+        
 rule trim_fastp:
     input:
         L1R1 = "{sample}_L001_R1_001.fastq.gz",
