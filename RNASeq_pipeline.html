@@ -364,13 +364,15 @@ MultiQC</a></li>
 <li><a href="#salmon" id="toc-salmon">Salmon</a></li>
 <li><a href="#setting-up-the-pipeline" id="toc-setting-up-the-pipeline">Setting up the Pipeline</a></li>
 <li><a href="#running-the-pipeline" id="toc-running-the-pipeline">Running the Pipeline</a></li>
+<li><a href="#common-errors" id="toc-common-errors">Common
+Errors</a></li>
 </ul>
 </div>
 
 <p>This pipeline is designed to take your raw sequencing reads
 (i.e. gzipped fasta files: <code>Sample1_R1.fq.gz</code>) and produced a
 matrix file with gene count for each sample. It uses three programs to
-do this. FastQC, fastp, and salmon. There are two versions of this
+do this. FastQC, fastp, and salmon. There are three versions of this
 pipeline depending on how you sequenced your samples. If samples were
 sequenced on only one lane (i.e. there are only two files for a single
 sample: Sample1_R1.fq.gz &amp; Sample1_R2.fq.gz) use the snakefile
@@ -378,10 +380,12 @@ called <code>snakefile1</code>. If samples were sequenced across two
 lanes (i.e., there are four files for a single sample:
 Sample1_R1_L1.fq.gz &amp; Sample1_R2_L1.fq.gz &amp; Sample1_R1_L2.fq.gz
 &amp; Sample1_R2_L2.fq.gz, in this case the L refers to lane number),
-use the snakefile called <code>snakefile2</code>. The final output of
-this pipeline is a file called <code>all_quant.sf</code>. It is a gene
-count (normalized by transcripts per million) matrix file for all
-samples.</p>
+use the snakefile called <code>snakefile2</code>. If samples were
+sequenced across three lanes (i.e., there are six files for a single
+sample), use the snakefile called <code>snakefile3</code>. The final
+output of this pipeline is a file called <code>all_quant.sf</code>. It
+is a gene count (normalized by transcripts per million) matrix file for
+all samples.</p>
 <p>This code was written with help from: * <a href="https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view" class="uri">https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view</a></p>
 <div id="fastqc-and-multiqc" class="section level2">
 <h2>FastQC and MultiQC</h2>
@@ -511,6 +515,19 @@ snakemake --snakefile snakefile2 --printshellcmd --jobs 10 --conda-frontend cond
 conda deactivate</code></pre>
 <p>To run as a job on FARM, submit:</p>
 <pre class="bash"><code>sbatch snakemake.sh</code></pre>
+</div>
+<div id="common-errors" class="section level2">
+<h2>Common Errors</h2>
+<p>If your pipeline ends prematurely and one of the errors says that
+there is a missing <code>json</code> file from the Salmon Index
+directly, most likely this is an issue with some of the commands jumping
+ahead to do the Salmon Quantification before the genome indexing is
+complete. To fix this issue, simply re-run the main snakemake script and
+it should fix the issue.</p>
+<p>Another common error is an OOM error or Out Of Memory error. If you
+cannot increase your memory allocation any further on your cluster, you
+can simply reduce the number of parallel jobs running at the same time.
+For example, reduced the jobs flag to 5: <code>--jobs 5</code></p>
 </div>
 
 

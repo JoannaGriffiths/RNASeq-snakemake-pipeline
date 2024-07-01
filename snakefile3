@@ -1,0 +1,149 @@
+import sys
+
+with open('sample_names.txt') as f:
+    SAMPLES = f.read().splitlines()
+    
+print('samples are:', SAMPLES, file=sys.stderr)
+
+with open('references.txt') as f2:
+    REF = f2.read().splitlines()
+    REF_r = [REF[0]]
+    REF_g = [REF[1]]
+
+ruleorder: index_reference > index_reference2
+
+rule all:
+    input:
+        expand("results/fastqc/{sample}_L001_R1_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L001_R2_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L002_R1_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L002_R2_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L003_R1_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastqc/{sample}_L003_R2_001_fastqc.html", sample=SAMPLES),
+        expand("results/fastp/{sample}_L1_1P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L1_2P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L2_1P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L2_2P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L3_1P.fq", sample=SAMPLES),
+        expand("results/fastp/{sample}_L3_2P.fq", sample=SAMPLES),        
+	"results/Salmon_index",
+        expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
+        "results/Salmon_quant/all_quant.sf"
+
+rule make_fastqc:
+    input:
+        L1R1 = "{sample}_L001_R1_001.fastq.gz",
+        L1R2 = "{sample}_L001_R2_001.fastq.gz",
+        L2R1 = "{sample}_L002_R1_001.fastq.gz",
+        L2R2 = "{sample}_L002_R2_001.fastq.gz",
+        L3R1 = "{sample}_L003_R1_001.fastq.gz",
+        L3R2 = "{sample}_L003_R2_001.fastq.gz",
+    params:
+        outdir = "results/fastqc"
+    priority: 2
+    log:
+        L1R1 = "logs/fastqc/{sample}_L1_R1.txt",
+        L1R2 = "logs/fastqc/{sample}_L1_R2.txt",
+        L2R1 = "logs/fastqc/{sample}_L2_R1.txt",
+        L2R2 = "logs/fastqc/{sample}_L2_R2.txt",
+        L3R1 = "logs/fastqc/{sample}_L3_R1.txt",
+        L3R2 = "logs/fastqc/{sample}_L3_R2.txt",
+    output:
+        "results/fastqc/{sample}_L001_R1_001_fastqc.html",
+        "results/fastqc/{sample}_L001_R2_001_fastqc.html",
+        "results/fastqc/{sample}_L002_R1_001_fastqc.html",
+        "results/fastqc/{sample}_L002_R2_001_fastqc.html",
+        "results/fastqc/{sample}_L003_R1_001_fastqc.html",
+        "results/fastqc/{sample}_L003_R2_001_fastqc.html",
+    run:
+        shell("fastqc {input.L1R1} -o results/fastqc 2> {log.L1R1}")
+        shell("fastqc {input.L1R2} -o results/fastqc 2> {log.L1R2}")
+        shell("fastqc {input.L2R1} -o results/fastqc 2> {log.L2R1}")
+        shell("fastqc {input.L2R2} -o results/fastqc 2> {log.L2R2}")
+        shell("fastqc {input.L3R1} -o results/fastqc 2> {log.L3R1}")
+        shell("fastqc {input.L3R2} -o results/fastqc 2> {log.L3R2}")
+
+rule trim_fastp:
+    input:
+        L1R1 = "{sample}_L001_R1_001.fastq.gz",
+        L1R2 = "{sample}_L001_R2_001.fastq.gz",
+        L2R1 = "{sample}_L002_R1_001.fastq.gz",
+        L2R2 = "{sample}_L002_R2_001.fastq.gz",
+        L3R1 = "{sample}_L003_R1_001.fastq.gz",
+        L3R2 = "{sample}_L003_R2_001.fastq.gz",
+    params:
+        outdir = "results/fastp",
+    priority: 2
+    log:
+        L1 = "logs/fastp/{sample}_L1.txt",
+        L2 = "logs/fastp/{sample}_L2.txt",
+        L3 = "logs/fastp/{sample}_L3.txt",
+    output:
+        L1R1 = "results/fastp/{sample}_L1_1P.fq",
+        L1R2 = "results/fastp/{sample}_L1_2P.fq",
+        L2R1 = "results/fastp/{sample}_L2_1P.fq",
+        L2R2 = "results/fastp/{sample}_L2_2P.fq",
+        L3R1 = "results/fastp/{sample}_L3_1P.fq",
+        L3R2 = "results/fastp/{sample}_L3_2P.fq",
+    run:
+        shell("fastp --in1 {input.L1R1} --in2 {input.L1R2} --out1 {output.L1R1} --out2 {output.L1R2} --detect_adapter_for_pe 2> {log.L1}")
+        shell("fastp --in1 {input.L2R1} --in2 {input.L2R2} --out1 {output.L2R1} --out2 {output.L2R2} --detect_adapter_for_pe 2> {log.L2}")
+        shell("fastp --in1 {input.L3R1} --in2 {input.L3R2} --out1 {output.L3R1} --out2 {output.L3R2} --detect_adapter_for_pe 2> {log.L3}")
+
+
+rule index_reference:
+    input:
+        g = REF_g,
+        r = REF_r,
+    params:
+        outdir = "results/Salmon_index"
+    output:
+        directory("results/Salmon_index")
+    log:
+        "logs/salmon/index.txt",
+    priority: 3
+    run:
+        shell("grep '^>' <(gunzip -c {input.g}) | cut -d ' ' -f 1 > decoys.txt")
+        shell("sed -i.bak -e 's/>//g' decoys.txt")
+        shell("cat {input.r} {input.g} > gentrome.fa.gz")
+        shell("salmon index --index {output} --transcripts gentrome.fa.gz -d decoys.txt --gencode 2> {log}")
+
+rule index_reference2:
+  input:
+    r = REF_r
+  output:
+    directory("results/Salmon_index")
+  log:
+    "logs/salmon/index.txt"
+  priority: 3
+  shell:
+    "salmon index --index {output} --transcripts {input.r} --gencode"
+
+rule salmon_quant:
+    input: 
+        L1R1 = "results/fastp/{sample}_L1_1P.fq",
+        L1R2 = "results/fastp/{sample}_L1_2P.fq",
+        L2R1 = "results/fastp/{sample}_L2_1P.fq",
+        L2R2 = "results/fastp/{sample}_L2_2P.fq",
+        L3R1 = "results/fastp/{sample}_L3_1P.fq",
+        L3R2 = "results/fastp/{sample}_L3_2P.fq",
+    log:
+        "logs/salmon/{sample}_quant.txt",
+    params:
+        outdir = "results/Salmon_quant",
+    priority: 1
+    output: 
+        directory("results/Salmon_quant/{sample}.quant")
+    shell:
+        "salmon quant -i results/Salmon_index --libType A -1 {input.L1R1} {input.L2R1} {input.L3R1} -2 {input.L1R2} {input.L2R2} {input.L3R2} -o {output} --validateMappings --seqBias --gcBias 2> {log}"
+
+rule salmon_merge:
+    input: 
+        expand("results/Salmon_quant/{sample}.quant", sample=SAMPLES),
+    log:
+        "logs/salmon/merge.txt",
+    output: 
+        "results/Salmon_quant/all_quant.sf"
+    priority: 0
+    shell:
+        "salmon quantmerge --quants {input} -o {output} 2> {log}"

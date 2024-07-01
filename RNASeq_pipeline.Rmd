@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library("reticulate")
 ```
 
-This pipeline is designed to take your raw sequencing reads (i.e. gzipped fasta files: `Sample1_R1.fq.gz`) and produced a matrix file with gene count for each sample. It uses three programs to do this. FastQC, fastp, and salmon. There are two versions of this pipeline depending on how you sequenced your samples. If samples were sequenced on only one lane (i.e. there are only two files for a single sample: Sample1_R1.fq.gz & Sample1_R2.fq.gz) use the snakefile called `snakefile1`. If samples were sequenced across two lanes (i.e., there are four files for a single sample: Sample1_R1_L1.fq.gz & Sample1_R2_L1.fq.gz & Sample1_R1_L2.fq.gz & Sample1_R2_L2.fq.gz, in this case the L refers to lane number), use the snakefile called `snakefile2`. The final output of this pipeline is a file called `all_quant.sf`. It is a gene count (normalized by transcripts per million) matrix file for all samples.
+This pipeline is designed to take your raw sequencing reads (i.e. gzipped fasta files: `Sample1_R1.fq.gz`) and produced a matrix file with gene count for each sample. It uses three programs to do this. FastQC, fastp, and salmon. There are three versions of this pipeline depending on how you sequenced your samples. If samples were sequenced on only one lane (i.e. there are only two files for a single sample: Sample1_R1.fq.gz & Sample1_R2.fq.gz) use the snakefile called `snakefile1`. If samples were sequenced across two lanes (i.e., there are four files for a single sample: Sample1_R1_L1.fq.gz & Sample1_R2_L1.fq.gz & Sample1_R1_L2.fq.gz & Sample1_R2_L2.fq.gz, in this case the L refers to lane number), use the snakefile called `snakefile2`. If samples were sequenced across three lanes (i.e., there are six files for a single sample), use the snakefile called `snakefile3`. The final output of this pipeline is a file called `all_quant.sf`. It is a gene count (normalized by transcripts per million) matrix file for all samples.
 
 This code was written with help from:
 * https://hackmd.io/kkosFQV5RhiMAzKNFxA2Mw?view
@@ -133,4 +133,9 @@ sbatch snakemake.sh
 ```
 
 
+## Common Errors
+
+If your pipeline ends prematurely and one of the errors says that there is a missing `json` file from the Salmon Index directly, most likely this is an issue with some of the commands jumping ahead to do the Salmon Quantification before the genome indexing is complete. To fix this issue, simply re-run the main snakemake script and it should fix the issue.
+
+Another common error is an OOM error or Out Of Memory error. If you cannot increase your memory allocation any further on your cluster, you can simply reduce the number of parallel jobs running at the same time. For example, reduced the jobs flag to 5: `--jobs 5`
 
